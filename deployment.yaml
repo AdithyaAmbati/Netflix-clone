@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: my-app
+  name: netflix-deployment
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
-      app: my-app
+      app: netflix
   template:
     metadata:
       labels:
-        app: my-app
+        app: netflix
     spec:
       containers:
-      - name: my-app
-        image: adithyaambati/netflix:latest
-        ports:
-        - containerPort: 80
+        - name: netflix
+          image: adithyaambati/netflix:latest
+          ports:
+            - containerPort: 80
