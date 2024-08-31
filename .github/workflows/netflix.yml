@@ -1,4 +1,4 @@
-name: Build, Analyze & Scan
+name: Build, Push, and Deploy
 
 on:
   push:
@@ -6,40 +6,25 @@ on:
       - main
 
 jobs:
-  build-analyze-scan:
-    name: Build, Analyze & Scan
+  build-push-deploy:
+    name: Build, Push, and Deploy to EKS
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0  # Shallow clones should be disabled for better relevancy of analysis
-          
-      - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@master
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      - name: Checkout Code
+        uses: actions/checkout@v2
 
-      - name: Install Trivy
+      - name: Build Docker Image
         run: |
-          sudo apt-get install wget apt-transport-https gnupg lsb-release -y
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
-          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update
-          sudo apt-get install trivy -y
+          docker build --build-arg TMDB_V3_API_KEY=${{ secrets.TMDB_V3_API_KEY }} -t ${{ secrets.DOCKER_REGISTRY_URL }}/netflix:latest .
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login ${{ secrets.DOCKER_REGISTRY_URL }} -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+          docker push ${{ secrets.DOCKER_REGISTRY_URL }}/netflix:latest
 
-      - name: Run Trivy Scan
-        run: trivy fs .
-
-      - name: Docker build and push
+      - name: Configure AWS CLI
         run: |
-          docker build --build-arg TMDB_V3_API_KEY=8d5e6a3af8dc7b2aaf3e63548ed034b6 -t netflix .
-          docker tag netflix adithyaambati/netflix:latest
-          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
-          docker push adithyaambati/netflix:latest
-        env:
-          DOCKER_CLI_ACI: 1
-          
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws configure set region ${{ secrets.AWS_REGION }}
+
       - name: Update kubeconfig
         run: aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME }}
 
