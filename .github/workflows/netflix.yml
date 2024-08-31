@@ -30,3 +30,10 @@ jobs:
 
       - name: Run Trivy Scan
         run: trivy fs .
+
+      - name: Docker build and push 
+        run:  
+            docker build --build-arg TMDB_V3_API_KEY=8d5e6a3af8dc7b2aaf3e63548ed034b6 -t netflix .
+            docker tag netflix adithyaambati/netflix:latest
+            docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+            docker push adithyaambati/netflix:latest
